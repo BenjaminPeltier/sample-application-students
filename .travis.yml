@@ -14,11 +14,12 @@ before_install:
 script:
   - mvn verify
   - |
-    mvn clean install sonar:sonar \
-    -Dsonar.projectKey=<SONAR_PROJECT_KEY> \
-    -Dsonar.organization=<SONAR_ORGANISATION_KEY> \
+  mvn sonar:sonar \
+    -Dsonar.projectKey=BenjaminPeltier_sample-application-students \
+    -Dsonar.organization=benjaminpeltier-github \
     -Dsonar.host.url=https://sonarcloud.io \
     -Dsonar.login=$SONAR_TOKEN
+    # -Dsonar.login=278eb66cd808f82fad3169184660b1968768866a
 
 # Cache the .m2 folder to prevent redownloading dependencies on each build
 cache:
