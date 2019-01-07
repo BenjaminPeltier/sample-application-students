@@ -1,0 +1,30 @@
+{
+    "run": {
+        "default": "",
+        "items": [
+            {
+                "name": "sample-application",
+                "projectName": "sample-application",
+                "workingDirectory": "/Users/benjamin/Documents/Cours/S7/DevOPS/sample-application-students",
+                "args": [],
+                "vmargs": [],
+                "env": {},
+                "preLaunchTask": ""
+            }
+        ]
+    },
+    "debug": {
+        "default": "",
+        "items": [
+            {
+                "name": "sample-application",
+                "projectName": "sample-application",
+                "workingDirectory": "/Users/benjamin/Documents/Cours/S7/DevOPS/sample-application-students",
+                "args": [],
+                "vmargs": [],
+                "env": {},
+                "preLaunchTask": ""
+            }
+        ]
+    }
+}
