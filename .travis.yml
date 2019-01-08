@@ -1,30 +1,49 @@
 language: java
 jdk: oraclejdk8
-
-# Define the services to use
 services:
-  - docker
-
+- docker
 before_install:
-  - sudo service mysql stop
-  - docker pull takimatraining/devops-training-db
-  - docker run -d -p 127.0.0.1:3306:3306 takimatraining/devops-training-db
-
-# Run Unit Test and Integration Tests
+- openssl aes-256-cbc -K $encrypted_9dbbe86bd78e_key -iv $encrypted_9dbbe86bd78e_iv
+  -in travis_deploy_rsa.enc -out travis_deploy_rsa -d
+- sudo service mysql stop
+- docker pull takimatraining/devops-training-db
+- docker run -d -p 127.0.0.1:3306:3306 takimatraining/devops-training-db
+-in travis_deploy_rsa.enc -out /tmp/travis_deploy_rsa -d  # Généré par travis encrypt-file
+- chmod 600 /tmp/travis_deploy_rsa
+- eval "$(ssh-agent -s)"
+- ssh-add /tmp/travis_deploy_rsa
+- echo -e "Host $SERVER_HOST\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
 script:
-  - mvn verify
-  - |
-    mvn clean install sonar:sonar \
-    -Dsonar.projectKey=BenjaminPeltier_sample-application-students \
-    -Dsonar.organization=benjaminpeltier-github \
-    -Dsonar.host.url=https://sonarcloud.io \
-    -Dsonar.login=$SONAR_TOKEN
-
-# Cache the .m2 folder to prevent redownloading dependencies on each build
+- mvn verify
+- |
+  mvn clean install sonar:sonar \
+  -Dsonar.projectKey=BenjaminPeltier_sample-application-students \
+  -Dsonar.organization=benjaminpeltier-github \
+  -Dsonar.host.url=https://sonarcloud.io \
+  -Dsonar.login=$SONAR_TOKEN
 cache:
   directories:
   - "$HOME/.m2/repository"
-
+notifications:
+  email:
+    on_failure: never
+after_success:
+- docker login -u $DOCKER_USER -p $DOCKER_PASS
+- export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH;
+  fi`
+- export IMAGE_NAME=takimatraining/sample-application
+- docker build -t $IMAGE_NAME:$TRAVIS_COMMIT .
+- docker tag $IMAGE_NAME:$TRAVIS_COMMIT $IMAGE_NAME:$TAG
+- docker push $IMAGE_NAME:$TAG
 env:
   global:
-    - secure: HOImjihkxvleFu96O4MSpZLhUfXkAsB2dlkXThBMPmZ3qAx7z4BrFyN02PWHxHOYe+MR/0TWY/D4XNcOyBGhfwYCPSaH1wXdQQWIVzR6FRbUOD979532sDDD0biDyICCdizAl6XYketl4oui/CXl656Rt5SQ1fFc1W/O99Pbssk2ZVK2Mm3Ln8jHxmszQneZmKlwewvi/XNwImhxfS7w2ioO+k+L0g7UEdPxVrqqPQNn4oo3rsey/rQn8Dj4gx/JFa29J7WC4MH+1KkCmfA5bJpIRkZ/1mAMP54pXM1jxzZiLmwwbJiRSL/AbpwOPbVVuFahjHQQqzYTZX2L2nNnXUy4oIl0br1MQXjH4GYQxH1AMLCMFA+FRdn36RhhrqkIW5kdPH4MAEDg0s4UEMNa7oWvwaq+pr30+TOaAfGnNGVIQXG7+sCWTDLqS/Cs4iITUFX5STWGhdP2cTX8zMsqtiqCw+sP2HzVXs0cdMjYgbMMGelACDBp9KApJh4aoclseY4cudN7XY2E7AL3eXHXZ+LS1vPUdBWhXf2RbssmRKvsBnHgRH96pPFySQ1oWwzFUmmBTV0mWNPOG9/gPdV+h4vw8KhpfELFMUmlf6n5P1WwE/aV8kgUuZBiagakvKmi1hzxFnoscPcleii0rWeyvpGERg56tt1NtvLtsJIa8Ak=
+  - secure: HOImjihkxvleFu96O4MSpZLhUfXkAsB2dlkXThBMPmZ3qAx7z4BrFyN02PWHxHOYe+MR/0TWY/D4XNcOyBGhfwYCPSaH1wXdQQWIVzR6FRbUOD979532sDDD0biDyICCdizAl6XYketl4oui/CXl656Rt5SQ1fFc1W/O99Pbssk2ZVK2Mm3Ln8jHxmszQneZmKlwewvi/XNwImhxfS7w2ioO+k+L0g7UEdPxVrqqPQNn4oo3rsey/rQn8Dj4gx/JFa29J7WC4MH+1KkCmfA5bJpIRkZ/1mAMP54pXM1jxzZiLmwwbJiRSL/AbpwOPbVVuFahjHQQqzYTZX2L2nNnXUy4oIl0br1MQXjH4GYQxH1AMLCMFA+FRdn36RhhrqkIW5kdPH4MAEDg0s4UEMNa7oWvwaq+pr30+TOaAfGnNGVIQXG7+sCWTDLqS/Cs4iITUFX5STWGhdP2cTX8zMsqtiqCw+sP2HzVXs0cdMjYgbMMGelACDBp9KApJh4aoclseY4cudN7XY2E7AL3eXHXZ+LS1vPUdBWhXf2RbssmRKvsBnHgRH96pPFySQ1oWwzFUmmBTV0mWNPOG9/gPdV+h4vw8KhpfELFMUmlf6n5P1WwE/aV8kgUuZBiagakvKmi1hzxFnoscPcleii0rWeyvpGERg56tt1NtvLtsJIa8Ak=
+  - secure: bEt2JwUeWf6llpbrPxsyT7wvc8EWmZ4+dgw9AUP4SLsxqqlQCHrEckiJp+nKhV7Tr4YrkuIyHPCBQmppkfAZlBPwcvQV3zGmZ/Vwdcp6B8H0lHRJDfpadwbkApwWNsMexF5Xc/HcTnPTTDGU3QZmOpZzcxzKnS6mEDeVzrM7mFseBZdm2zlfC8STUdpDyWydC02vZ3EwwG7P/5fiTipX9pxT8fqVbxYFjrIUxMOI1Pjt0IGk5VeXyYJJVhxtUASp0xoa17QGojWGIJyBvrCsM3rUN5jEId7ROLFXU9YwQBnIxZ3FMWtHzl4/kenRTepCY3Ex9bixFsfJ0JEFqr0D4lkVgFbqWBDxzTpKKmwgd3Le0Gecbte41wgH3BpeMBRHmKoCVepbYRQQ0YVmRgYhZYZmUCJSxHBH+ZtBnKwM/oWjNd+4LU7gs0V3IfnvVb+LbV6cojCxGJaf8/jpLsgLseoiv4s13ET+VJzZz4X1Ddxr9gY3TeT+XBFKWADpwOaJnfDS/BTz0YpWxkQOPu5xSgcDjkNjiBa1NM20jUeaGTdgQcp5Pr/m8Dr1AtzDv9rvOJfoGXV9vSZzJEi0u7qnQikPOdQbs9eDoKCDMmryJqT5r0gQvD00n+B6V5IOP8yQA+KW/27/xZC3n+Fdv4xO/oyo3UQhH65jCdYlvqWmTds=
+  - secure: J9CxIREdQx71kEhZqXGCWObNyUP0EpXU9nNEqqMUbXyhq1fEhrG4jm2D9218da15xSMeJPqw+WzpOA7oe6uUiOWh2l5hPV+ZutsXddK4xTm8FbvuNltJY1NqwRynS/gKiK/TXT/EHYp979vTX0vW7Hwr5NIMGpy7LxLAPlob/i8baxVXP6g0jOLjdwahJSuwEu0djLw6PXKJugDl2aFjZvzXNIvJYHrpXR72gTYXXxJD8ruw8OcSPm+XwG7NyJZt3enWhTmDMcaycNagr0svDkUyEUDFzu12WTC9gN/O8Ru/at2TQg4Wop5l8ne2voKrV2MP64HXZLEvLFyLw9Aqw42g8nNjzRvUYIefeyu+QfDpDXrH88AlNUoMZnFoW8pi0kU7ncpofS7lMcaK+0PMAcTATeBA8S4OmkeVGaDKUZXredsjmhzI2BUn1Y4tFBsHq41AdfniJAHtC3JZrT1AuMP+KlzguLFtum2oHrVqz/WrLXpJ2SuKaW2SqDleeQAW4ydi2wio5WlMcslMnAfCEaHSTyGw/aKapdZF+TRhJDS5nL2evCbDdwJr3KocAoFv2ySTeTL6tpr0D6OBANWkALoinmp9maVTEnGJpx+/486WdcFWK9O5y809nLzgghFoZQP6l4W48Yte2h2F845HbTqmmoUOIy0NZQzSMAS2xwQ=
+deploy:
+  provider: script
+  script: ssh -i /tmp/travis_deploy_rsa $DEPLOY_USER@$SERVER_HOST "sudo docker pull
+    $IMAGE_NAME:$TAG && sudo docker rm -f app || true && sudo docker run -d --network
+    net -p 80:8080 --name app $IMAGE_NAME:$TAG"
+  on:
+    branch: master
